@@ -3,9 +3,7 @@ error_chain! {
         Io(::std::io::Error);
         Config(::config::ConfigError);
         Json(::serde_json::error::Error);
-        Toml(::toml::de::Error);
         Request(::reqwest::Error);
-        TomlSerialize(::toml::ser::Error);
     }
     errors {
         Poisoned(a: &'static str) {

@@ -1,9 +1,8 @@
 use super::{ErrorKind, Result};
 use std::fs::File;
 use std::path::PathBuf;
-use std::io::{Read, Write};
 use std::ops::Sub;
-use toml;
+use serde_json;
 use chrono::Date as cDate;
 use chrono::{Datelike, Local, Timelike};
 
@@ -161,26 +160,24 @@ impl App {
         token == self.verification_token
     }
 
-    fn get_commit_from_file(file: &mut File) -> Result<DayCommit> {
-        let mut content = String::new();
-        file.read_to_string(&mut content)?;
-        toml::from_str(&content).map_err(|e| ErrorKind::Toml(e).into())
+    fn get_commit_from_file(file: &File) -> Result<DayCommit> {
+        serde_json::from_reader(file).map_err(|e| ErrorKind::Json(e).into())
     }
 
     fn get_commit_from_path(path: PathBuf) -> Result<DayCommit> {
-        let mut file = File::open(path)?;
-        App::get_commit_from_file(&mut file)
+        let file = File::open(path)?;
+        App::get_commit_from_file(&file)
     }
 
     pub fn create_working_file(&self, date: Date, time: Time) -> Result<DayCommit> {
         let mut path = PathBuf::from(&self.data_path);
-        path.push("working.toml");
+        path.push("working.json");
 
         if path.exists() {
             bail!(ErrorKind::AlreadyInitialized);
         }
 
-        let mut file = File::create(path)?;
+        let file = File::create(path)?;
 
         let day_commit = DayCommit {
             date,
@@ -190,7 +187,7 @@ impl App {
             participants: vec![],
         };
 
-        file.write_all(toml::to_string_pretty(&day_commit)?.as_bytes())?;
+        serde_json::to_writer_pretty(file, &day_commit)?;
 
         Ok(day_commit)
     }
@@ -199,7 +196,7 @@ impl App {
         use std::fs::OpenOptions;
 
         let mut path = PathBuf::from(&self.data_path);
-        path.push("working.toml");
+        path.push("working.json");
 
         if !path.exists() {
             bail!(ErrorKind::NotInitialized);
@@ -216,30 +213,26 @@ impl App {
     where
         F: FnOnce(DayCommit) -> DayCommit,
     {
-        let mut file = self.get_working_file()?;
-
-        let mut content = String::new();
-        file.read_to_string(&mut content)?;
-
-        let mut day_commit: DayCommit = toml::from_str(&content)?;
+        let file = self.get_working_file()?;
+        let mut day_commit: DayCommit = serde_json::from_reader(&file)?;
 
         day_commit = f(day_commit);
 
-        file.write_all(toml::to_string_pretty(&day_commit)?.as_bytes())?;
+        serde_json::to_writer_pretty(file, &day_commit)?;
 
         Ok(day_commit)
     }
 
     pub fn get_working_commit(&self) -> Result<DayCommit> {
-        let mut file = self.get_working_file()?;
-        App::get_commit_from_file(&mut file)
+        let file = self.get_working_file()?;
+        App::get_commit_from_file(&file)
     }
 
     pub fn remove_working_commit(&self) -> Result<()> {
         use std::fs::remove_file;
 
         let mut path = PathBuf::from(&self.data_path);
-        path.push("working.toml");
+        path.push("working.json");
 
         if !path.exists() {
             bail!(ErrorKind::NotInitialized);
@@ -250,12 +243,9 @@ impl App {
     pub fn commit_a_day(&self, end_time: Time, message: String) -> Result<DayCommit> {
         use std::fs::create_dir_all;
 
-        let mut origin = self.get_working_file()?;
+        let origin = self.get_working_file()?;
 
-        let mut content = String::new();
-        origin.read_to_string(&mut content)?;
-
-        let mut day_commit: DayCommit = toml::from_str(&content)?;
+        let mut day_commit: DayCommit = serde_json::from_reader(origin)?;
 
         day_commit.end_time = Some(end_time);
         day_commit.message = Some(message);
@@ -263,11 +253,11 @@ impl App {
         let mut path = PathBuf::from(&self.data_path);
         path.push("working");
         path.push(day_commit.date.day.to_string());
-        path.set_extension("toml");
+        path.set_extension("json");
         create_dir_all(&path)?;
 
-        let mut commit_file = File::create(&path)?;
-        commit_file.write_all(toml::to_string_pretty(&day_commit)?.as_bytes())?;
+        let commit_file = File::create(&path)?;
+        serde_json::to_writer_pretty(commit_file, &day_commit)?;
 
         self.remove_working_commit()?;
 
@@ -280,7 +270,7 @@ impl App {
             dir.filter_map(|f| {
                 f.ok()
                     .and_then(|f| File::open(f.path()).ok())
-                    .and_then(|mut f| App::get_commit_from_file(&mut f).ok())
+                    .and_then(|f| App::get_commit_from_file(&f).ok())
             }).collect(),
         )
     }
