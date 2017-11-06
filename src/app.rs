@@ -221,9 +221,9 @@ impl App {
 
         let mut path = PathBuf::from(&self.data_path);
         path.push("working");
+        create_dir_all(&path)?;
         path.push(day_commit.date.2.to_string());
         path.set_extension("json");
-        create_dir_all(&path)?;
 
         let commit_file = File::create(&path)?;
         serde_json::to_writer_pretty(commit_file, &day_commit)?;
