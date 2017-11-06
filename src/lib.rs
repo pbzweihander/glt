@@ -442,7 +442,7 @@ fn log_message(commits: &[DayCommit]) -> Response {
                 );
                 for (k, v) in participants_record {
                     let t: Time = v.1.into();
-                    s = s + &format!("\n{} - {}일, {}", k, v.0, t);
+                    s = s + &format!("\n{} - {}일, {}시간 {}분", k, v.0, t.0, t.1);
                 }
                 s
             },
