@@ -177,9 +177,7 @@ impl App {
             bail!(ErrorKind::NotInitialized);
         }
 
-        option
-            .open(&path)
-            .map_err(|e| ErrorKind::Io(e).into())
+        option.open(&path).map_err(|e| ErrorKind::Io(e).into())
     }
 
     pub fn edit_working_commit<F>(&self, f: F) -> Result<DayCommit>
