@@ -1,5 +1,5 @@
 use super::{ErrorKind, Result};
-use std::fs::{File, OpenOptions, create_dir_all};
+use std::fs::{create_dir_all, File, OpenOptions};
 use std::path::PathBuf;
 use std::ops::Sub;
 use serde_json;
@@ -212,7 +212,6 @@ impl App {
     }
 
     pub fn commit_a_day(&self, end_time: Time, message: String) -> Result<DayCommit> {
-
         let mut day_commit: DayCommit = self.get_working_commit()?;
 
         day_commit.end_time = Some(end_time);
@@ -243,15 +242,17 @@ impl App {
     pub fn get_working_directory_commit(&self) -> Result<Vec<DayCommit>> {
         let dir = self.get_working_directory_entries()?;
         Ok(
-            dir.filter_map(|f| {
-                f.ok()
-                    .and_then(|f| File::open(f.path()).ok())
-                    .and_then(|f| App::get_commit_from_file(&f).ok())
-            }).collect(),
+            dir.into_iter()
+                .filter_map(|f| {
+                    File::open(f.path())
+                        .ok()
+                        .and_then(|f| App::get_commit_from_file(&f).ok())
+                })
+                .collect(),
         )
     }
 
-    pub fn get_working_directory_entries(&self) -> Result<::std::fs::ReadDir> {
+    pub fn get_working_directory_entries(&self) -> Result<Vec<::std::fs::DirEntry>> {
         use std::fs::read_dir;
 
         let mut path = PathBuf::from(&self.data_path);
@@ -260,14 +261,14 @@ impl App {
             bail!(ErrorKind::NotInitialized);
         }
 
-        read_dir(path).map_err(|e| ErrorKind::Io(e).into())
+        Ok(read_dir(path)?.filter_map(|d| d.ok()).collect())
     }
 
     pub fn push_a_month(&self) -> Result<()> {
         use std::fs::{copy, remove_file};
 
-        let mut dir = self.get_working_directory_entries()?;
-        let first_day: DayCommit = App::get_commit_from_path(dir.next().unwrap()?.path())?;
+        let dir = self.get_working_directory_entries()?;
+        let first_day: DayCommit = App::get_commit_from_path(dir[0].path())?;
 
         let mut path = PathBuf::from(&self.data_path);
         path.push(first_day.date.0.to_string());
@@ -275,7 +276,7 @@ impl App {
         create_dir_all(&path)?;
 
         for d in dir {
-            let origin = d?.path();
+            let origin = d.path();
             let mut target = path.clone();
             target.push(origin.file_name().unwrap());
             copy(&origin, target)?;
