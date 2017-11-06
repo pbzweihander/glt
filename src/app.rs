@@ -1,5 +1,5 @@
 use super::{ErrorKind, Result};
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::path::PathBuf;
 use std::ops::Sub;
 use serde_json;
@@ -169,9 +169,7 @@ impl App {
         Ok(day_commit)
     }
 
-    pub fn get_working_file(&self) -> Result<::std::fs::File> {
-        use std::fs::OpenOptions;
-
+    pub fn get_working_file(&self, option: &mut OpenOptions) -> Result<::std::fs::File> {
         let mut path = PathBuf::from(&self.data_path);
         path.push("working.json");
 
@@ -179,9 +177,7 @@ impl App {
             bail!(ErrorKind::NotInitialized);
         }
 
-        OpenOptions::new()
-            .read(true)
-            .write(true)
+        option
             .open(&path)
             .map_err(|e| ErrorKind::Io(e).into())
     }
@@ -190,18 +186,18 @@ impl App {
     where
         F: FnOnce(DayCommit) -> DayCommit,
     {
-        let file: File = self.get_working_file()?;
-        let mut day_commit: DayCommit = serde_json::from_reader(&file)?;
+        let mut day_commit: DayCommit = self.get_working_commit()?;
 
         day_commit = f(day_commit);
 
+        let file: File = self.get_working_file(OpenOptions::new().write(true).truncate(true))?;
         serde_json::to_writer_pretty(file, &day_commit)?;
 
         Ok(day_commit)
     }
 
     pub fn get_working_commit(&self) -> Result<DayCommit> {
-        let file = self.get_working_file()?;
+        let file = self.get_working_file(OpenOptions::new().read(true))?;
         App::get_commit_from_file(&file)
     }
 
@@ -220,9 +216,7 @@ impl App {
     pub fn commit_a_day(&self, end_time: Time, message: String) -> Result<DayCommit> {
         use std::fs::create_dir_all;
 
-        let origin = self.get_working_file()?;
-
-        let mut day_commit: DayCommit = serde_json::from_reader(origin)?;
+        let mut day_commit: DayCommit = self.get_working_commit()?;
 
         day_commit.end_time = Some(end_time);
         day_commit.message = Some(message);
