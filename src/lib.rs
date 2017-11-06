@@ -312,12 +312,12 @@ fn committed_message(day_commit: DayCommit) -> Response {
             let diff = end_time - start_time;
             format!(
                 "{}:{} ~ {}:{} {}시간 {}분",
-                start_time.hour,
-                start_time.minute,
-                end_time.hour,
-                end_time.minute,
-                diff.hour,
-                diff.minute
+                start_time.0,
+                start_time.1,
+                end_time.0,
+                end_time.1,
+                diff.0,
+                diff.1
             )
         },
     });
@@ -366,7 +366,7 @@ fn log_message(commits: &[DayCommit]) -> Response {
         attachments: vec![],
     };
     let mut a = Attachment {
-        title: format!("{}년 {}월", first_day.date.year, first_day.date.month),
+        title: format!("{}년 {}월", first_day.date.0, first_day.date.1),
         text: format!(
             "총 {}일, {}의 근무 기록이 있습니다.",
             commits.len(),
@@ -378,7 +378,7 @@ fn log_message(commits: &[DayCommit]) -> Response {
     };
     for day_commit in commits {
         a.fields.push(AttachmentFields {
-            title: format!("{}일", day_commit.date.day),
+            title: format!("{}일", day_commit.date.2),
             value: {
                 let mut s = String::new();
                 if let Some(ref end_time) = day_commit.end_time {
@@ -387,12 +387,12 @@ fn log_message(commits: &[DayCommit]) -> Response {
                     s = s
                         + &format!(
                             "{}:{} ~ {}:{} {}시간 {}분",
-                            start_time.hour,
-                            start_time.minute,
-                            end_time.hour,
-                            end_time.minute,
-                            diff.hour,
-                            diff.minute
+                            start_time.0,
+                            start_time.1,
+                            end_time.0,
+                            end_time.1,
+                            diff.0,
+                            diff.1
                         );
                 } else {
                     s = s + &format!("{} 시작", day_commit.start_time);
@@ -461,7 +461,8 @@ fn help_message() -> Response {
 /glt commit <message> # 그 날의 근무 끝, 기록 추가
 /glt reset # 그 날의 근무 취소, 기록 버리기
 /glt log # 그 달의 근무 기록 보기
-/glt push # 그 달의 근무 기록 저장 및 새 달로 넘어감".to_owned(),
+/glt push # 그 달의 근무 기록 저장 및 새 달로 넘어감"
+            .to_owned(),
         mrkdwn: false,
     })
 }

@@ -16,94 +16,71 @@ pub struct DayCommit {
 }
 
 #[derive(Deserialize, Serialize, Clone)]
-pub struct Date {
-    pub year: i32,
-    pub month: u32,
-    pub day: u32,
-}
+pub struct Date(pub i32, pub u32, pub u32);
 
 impl From<Date> for cDate<Local> {
     fn from(d: Date) -> cDate<Local> {
         use chrono::prelude::*;
-        Local.ymd(d.year, d.month, d.day)
+        Local.ymd(d.0, d.1, d.2)
     }
 }
 
 impl From<cDate<Local>> for Date {
     fn from(d: cDate<Local>) -> Date {
-        Date {
-            year: d.year(),
-            month: d.month(),
-            day: d.day(),
-        }
+        Date(d.year(), d.month(), d.day())
     }
 }
 
 impl ::std::fmt::Display for Date {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        write!(f, "{}년 {}월 {}일", self.year, self.month, self.day)
+        write!(f, "{}년 {}월 {}일", self.0, self.1, self.2)
     }
 }
 
 #[derive(Deserialize, Serialize, Clone)]
-pub struct Time {
-    pub hour: u32,
-    pub minute: u32,
-}
+pub struct Time(pub u32, pub u32);
 
 impl From<Time> for ::chrono::NaiveTime {
     fn from(t: Time) -> ::chrono::NaiveTime {
-        ::chrono::NaiveTime::from_hms(t.hour, t.minute, 0)
+        ::chrono::NaiveTime::from_hms(t.0, t.1, 0)
     }
 }
 
 impl From<::chrono::NaiveTime> for Time {
     fn from(t: ::chrono::NaiveTime) -> Time {
-        Time {
-            hour: t.hour(),
-            minute: t.minute(),
-        }
+        Time(t.hour(), t.minute())
     }
 }
 
 impl From<Time> for f32 {
     fn from(t: Time) -> f32 {
-        (t.hour as f32) + ((t.minute as f32) / 60f32)
+        (t.0 as f32) + ((t.1 as f32) / 60f32)
     }
 }
 
 impl From<f32> for Time {
     fn from(f: f32) -> Time {
-        Time {
-            hour: f as u32,
-            minute: ((f * 60f32) as u32) % 60,
-        }
+        Time(f as u32, ((f * 60f32) as u32) % 60)
     }
 }
 
 impl Sub for Time {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
-        Time {
-            hour: self.hour - rhs.hour,
-            minute: self.minute - rhs.minute,
-        }
+        Time(self.0 - rhs.0, self.1 - rhs.1)
     }
 }
 
 impl<'a> Sub for &'a Time {
     type Output = Time;
     fn sub(self, rhs: Self) -> Self::Output {
-        Time {
-            hour: self.hour - rhs.hour,
-            minute: self.minute - rhs.minute,
-        }
+        Time(self.0 - rhs.0, self.1 - rhs.1)
     }
 }
 
 impl ::std::fmt::Display for Time {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        write!(f, "{}시 {}분", self.hour, self.minute)
+        write!(f, "{}시 {}분", self.0, self.1)
     }
 }
 
@@ -213,7 +190,7 @@ impl App {
     where
         F: FnOnce(DayCommit) -> DayCommit,
     {
-        let file = self.get_working_file()?;
+        let file: File = self.get_working_file()?;
         let mut day_commit: DayCommit = serde_json::from_reader(&file)?;
 
         day_commit = f(day_commit);
@@ -252,7 +229,7 @@ impl App {
 
         let mut path = PathBuf::from(&self.data_path);
         path.push("working");
-        path.push(day_commit.date.day.to_string());
+        path.push(day_commit.date.2.to_string());
         path.set_extension("json");
         create_dir_all(&path)?;
 
@@ -285,14 +262,14 @@ impl App {
     }
 
     pub fn push_a_month(&self) -> Result<()> {
-        use std::fs::{create_dir_all, copy, remove_file};
+        use std::fs::{copy, create_dir_all, remove_file};
 
         let mut dir = self.get_working_directory_entries()?;
         let first_day: DayCommit = App::get_commit_from_path(dir.next().unwrap()?.path())?;
 
         let mut path = PathBuf::from(&self.data_path);
-        path.push(first_day.date.year.to_string());
-        path.push(first_day.date.month.to_string());
+        path.push(first_day.date.0.to_string());
+        path.push(first_day.date.1.to_string());
         create_dir_all(&path)?;
 
         for d in dir {
