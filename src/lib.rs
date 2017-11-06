@@ -135,7 +135,7 @@ fn add_command(app: &App, data: &Request) -> Result<Response> {
     }
     match add(app, list) {
         Err(Error(ErrorKind::NotInitialized, _)) => Ok(not_initialized_message()),
-        Ok(_) => Ok(added_message()),
+        Ok(added) => Ok(added_message(added)),
         Err(e) => Err(e),
     }
 }
@@ -223,11 +223,19 @@ fn already_initialized_message() -> Response {
     })
 }
 
-fn added_message() -> Response {
+fn added_message(added: Vec<String>) -> Response {
     use slack::*;
     Response::Message(Message {
-        response_type: ResponseType::Ephemeral,
-        text: "근무자가 추가되었습니다.".to_owned(),
+        response_type: ResponseType::InChannel,
+        text: format!("{} 근무자가 추가되었습니다.", {
+            let mut s = String::new();
+            for p in added {
+                s = s + &p + ", ";
+            }
+            s.pop();
+            s.pop();
+            s
+        }),
         mrkdwn: false,
     })
 }
@@ -475,8 +483,10 @@ fn init(app: &App) -> Result<DayCommit> {
     app.create_working_file(Local::today().into(), Local::now().time().into())
 }
 
-fn add(app: &App, participants: Vec<String>) -> Result<()> {
+fn add(app: &App, participants: Vec<String>) -> Result<Vec<String>> {
     let now: Time = chrono::Local::now().time().into();
+    let mut added: Vec<String> = vec![];
+
     app.edit_working_commit(|mut day_commit| {
         let cloned_commit = day_commit.clone();
 
@@ -486,11 +496,13 @@ fn add(app: &App, participants: Vec<String>) -> Result<()> {
                 name: p,
             };
             if !cloned_commit.participants.contains(&pp) {
+                added.push(pp.name.clone());
                 day_commit.participants.push(pp);
             }
         }
         day_commit
-    }).map(|_| ())
+    })?;
+    Ok(added)
 }
 
 fn rm(app: &App, participants: Vec<String>) -> Result<()> {
