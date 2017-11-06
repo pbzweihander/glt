@@ -262,7 +262,7 @@ fn removed_message() -> Response {
 
 fn status_message(day_commit: DayCommit) -> Response {
     use slack::*;
-    let m = AttachedMessage {
+    let mut m = AttachedMessage {
         response_type: ResponseType::Ephemeral,
         attachments: vec![],
     };
@@ -288,12 +288,13 @@ fn status_message(day_commit: DayCommit) -> Response {
             content
         },
     });
+    m.attachments.push(a);
     Response::AttachedMessage(m)
 }
 
 fn committed_message(day_commit: DayCommit) -> Response {
     use slack::*;
-    let m = AttachedMessage {
+    let mut m = AttachedMessage {
         response_type: ResponseType::InChannel,
         attachments: vec![],
     };
@@ -336,6 +337,7 @@ fn committed_message(day_commit: DayCommit) -> Response {
             content
         },
     });
+    m.attachments.push(a);
     Response::AttachedMessage(m)
 }
 
@@ -361,7 +363,7 @@ fn log_message(commits: &[DayCommit]) -> Response {
     let total_hour: Time = total_hour.into();
     let mut participants_record: HashMap<String, (u32, f32)> = HashMap::new();
 
-    let m = AttachedMessage {
+    let mut m = AttachedMessage {
         response_type: ResponseType::InChannel,
         attachments: vec![],
     };
@@ -438,6 +440,7 @@ fn log_message(commits: &[DayCommit]) -> Response {
             },
         });
     }
+    m.attachments.push(a);
     Response::AttachedMessage(m)
 }
 
