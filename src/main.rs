@@ -11,7 +11,7 @@ use glt::{handle_command, Result};
 
 fn main() {
     rocket::ignite()
-        .mount("/glt", routes![command_request])
+        .mount("/glt", routes![command_request, ping])
         .launch();
 }
 
@@ -20,4 +20,9 @@ fn command_request(form: LenientForm<Request>) -> Result<rocket_contrib::Json> {
     let data = form.into_inner();
     let json = handle_command(data)?;
     Ok(rocket_contrib::Json(json))
+}
+
+#[post("/ping")]
+fn ping() -> String {
+    "pong".to_owned()
 }
