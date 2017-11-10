@@ -40,6 +40,8 @@ impl ::std::fmt::Display for Date {
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Time(pub u32, pub u32);
 
+pub struct TimeDiff(pub i32, pub i32);
+
 impl From<Time> for ::chrono::NaiveTime {
     fn from(t: Time) -> ::chrono::NaiveTime {
         ::chrono::NaiveTime::from_hms(t.0, t.1, 0)
@@ -64,23 +66,65 @@ impl From<f32> for Time {
     }
 }
 
+impl<'a> From<&'a Time> for f32 {
+    fn from(t: &'a Time) -> f32 {
+        (t.0 as f32) + ((t.1 as f32) / 60f32)
+    }
+}
+
+impl From<TimeDiff> for f32 {
+    fn from(t: TimeDiff) -> f32 {
+        (t.0 as f32) + ((t.1 as f32) / 60f32)
+    }
+}
+
+impl From<f32> for TimeDiff {
+    fn from(f: f32) -> TimeDiff {
+        TimeDiff(f as i32, ((f * 60f32) as i32) % 60)
+    }
+}
+
 impl Sub for Time {
-    type Output = Self;
+    type Output = TimeDiff;
     fn sub(self, rhs: Self) -> Self::Output {
-        Time(self.0 - rhs.0, self.1 - rhs.1)
+        let self_f: f32 = self.into();
+        let rhs_f: f32 = rhs.into();
+        let diff: f32 = self_f - rhs_f;
+        diff.into()
     }
 }
 
 impl<'a> Sub for &'a Time {
-    type Output = Time;
+    type Output = TimeDiff;
     fn sub(self, rhs: Self) -> Self::Output {
-        Time(self.0 - rhs.0, self.1 - rhs.1)
+        let self_f: f32 = self.into();
+        let rhs_f: f32 = rhs.into();
+        let diff: f32 = self_f - rhs_f;
+        diff.into()
     }
 }
 
 impl ::std::fmt::Display for Time {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         write!(f, "{}시 {}분", self.0, self.1)
+    }
+}
+
+impl ::std::fmt::Display for TimeDiff {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "{}시간 {}분", self.0, self.1)
+    }
+}
+
+impl Time {
+    pub fn to_short_str(&self) -> String {
+        format!("{}:{}", self.0, self.1)
+    }
+}
+
+impl TimeDiff {
+    pub fn to_short_str(&self) -> String {
+        format!("{}:{}", self.0, self.1)
     }
 }
 

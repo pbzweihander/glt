@@ -18,7 +18,7 @@ pub mod error;
 pub use error::{Error, ErrorKind, Result};
 
 pub mod app;
-pub use app::{App, Date, DayCommit, Participant, Time};
+pub use app::{App, Date, DayCommit, Participant, Time, TimeDiff};
 
 pub mod slack;
 
@@ -320,13 +320,10 @@ fn committed_message(day_commit: DayCommit) -> Response {
             let end_time = &day_commit.end_time.unwrap();
             let diff = end_time - start_time;
             format!(
-                "{}:{} ~ {}:{} {}시간 {}분",
-                start_time.0,
-                start_time.1,
-                end_time.0,
-                end_time.1,
-                diff.0,
-                diff.1
+                "{} ~ {} {}",
+                start_time.to_short_str(),
+                end_time.to_short_str(),
+                diff,
             )
         },
     });
@@ -396,13 +393,10 @@ fn log_message(commits: &[DayCommit]) -> Response {
                     let diff = end_time - start_time;
                     s = s
                         + &format!(
-                            "{}:{} ~ {}:{} {}시간 {}분",
-                            start_time.0,
-                            start_time.1,
-                            end_time.0,
-                            end_time.1,
-                            diff.0,
-                            diff.1
+                            "{} ~ {} {}",
+                            start_time.to_short_str(),
+                            end_time.to_short_str(),
+                            diff,
                         );
                 } else {
                     s = s + &format!("{} 시작", day_commit.start_time);
@@ -441,8 +435,8 @@ fn log_message(commits: &[DayCommit]) -> Response {
                     total_hour
                 );
                 for (k, v) in participants_record {
-                    let t: Time = v.1.into();
-                    s = s + &format!("\n{} - {}일, {}시간 {}분", k, v.0, t.0, t.1);
+                    let t: TimeDiff = v.1.into();
+                    s = s + &format!("\n{} - {}일, {}", k, v.0, t);
                 }
                 s
             },
